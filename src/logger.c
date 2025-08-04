@@ -23,18 +23,20 @@ struct logger_t {
 
 #define PROGRAM_NAME __progname
 
-#define LOG_LEVEL_ERROR 0
-#define LOG_LEVEL_WARNING 1
-#define LOG_LEVEL_STATUS 2
-#define LOG_LEVEL_DEBUG 3
+#define LOG_LEVEL_ERROR     0
+#define LOG_LEVEL_WARNING   1
+#define LOG_LEVEL_STATUS    2
+#define LOG_LEVEL_DEBUG     3
+#define LOG_LEVEL_TRACE     4
 
 /*
  * Prefixes for the different logging levels
  */
-#define LOG_PREFIX_ERROR "ERROR"
-#define LOG_PREFIX_WARNING "WARNING"
-#define LOG_PREFIX_STATUS "STATUS"
-#define LOG_PREFIX_DEBUG "DEBUG"
+#define LOG_PREFIX_ERROR    "E"
+#define LOG_PREFIX_WARNING  "W"
+#define LOG_PREFIX_STATUS   "i"
+#define LOG_PREFIX_DEBUG    "d"
+#define LOG_PREFIX_TRACE    "t"
 
 /*
 */  
@@ -43,7 +45,8 @@ static struct logger_t log_global_set;
 static const char* LOG_LEVELS[] = { LOG_PREFIX_ERROR,
                     LOG_PREFIX_WARNING,
                     LOG_PREFIX_STATUS,
-                    LOG_PREFIX_DEBUG };
+                    LOG_PREFIX_DEBUG,
+                    LOG_PREFIX_TRACE };
 
 void print_to_syslog(const int level, const char* message);
 void print_to_file(const int level, const char* message);
@@ -71,6 +74,7 @@ void logger_reset_state(void)
     log_global_set.max_log_level = LOG_MAX_LEVEL_ERROR_WARNING_STATUS;
     cleanup_internal();
     log_global_set.logger_func = print_to_syslog;
+    openlog(PROGRAM_NAME, LOG_CONS | LOG_PID | LOG_NDELAY, LOG_LOCAL1);
 }
 
 /*
@@ -93,8 +97,7 @@ void print_to_file(const int level, const char* message)
     current_tm = localtime(&time_now);
 
     int res = fprintf(log_global_set.out_file,
-            "%s: %02i:%02i:%02i [%s] %s\n"
-                , PROGRAM_NAME
+            "%02i:%02i:%02i [%s] %s\n"
                 , current_tm->tm_hour
                 , current_tm->tm_min
                 , current_tm->tm_sec
@@ -150,12 +153,12 @@ void logger_set_out_stdout()
  */
 void log_generic(const int level, const char* format, va_list args)
 {
-    char buffer[256];
-    vsprintf(buffer, format, args);
+    char buffer[LOGGER_BUF_SIZE];
+    vsnprintf(buffer, sizeof(buffer), format, args);
     log_global_set.logger_func(level, buffer);
 }
 
-void log_error(char *format, ...)
+void log_error(const char *format, ...)
 {
     va_list args;
     va_start(args, format);
@@ -163,7 +166,7 @@ void log_error(char *format, ...)
     va_end(args);
 }
 
-void log_warning(char *format, ...)
+void log_warning(const char *format, ...)
 {
     if (log_global_set.max_log_level < LOG_MAX_LEVEL_ERROR_WARNING_STATUS) {
         return;
@@ -175,7 +178,7 @@ void log_warning(char *format, ...)
     va_end(args);
 }
 
-void log_status(char *format, ...)
+void log_status(const char *format, ...)
 {
     if (log_global_set.max_log_level < LOG_MAX_LEVEL_ERROR_WARNING_STATUS) {
         return;
@@ -187,7 +190,7 @@ void log_status(char *format, ...)
     va_end(args);
 }
 
-void log_debug(char *format, ...)
+void log_debug(const char *format, ...)
 {
     if (log_global_set.max_log_level <  LOG_MAX_LEVEL_ERROR_WARNING_STATUS_DEBUG) {
         return;
@@ -199,3 +202,14 @@ void log_debug(char *format, ...)
     va_end(args);
 }
 
+void log_trace(const char* format, ...)
+{
+    if (log_global_set.max_log_level <  LOG_MAX_LEVEL_ERROR_WARNING_STATUS_DEBUG_TRACE) {
+        return;
+    }
+
+    va_list args;
+    va_start(args, format);
+    log_generic(LOG_LEVEL_TRACE, format, args);
+    va_end(args);
+}
