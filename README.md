@@ -12,11 +12,13 @@ make
 - Run
 ```
 $ ./slog
-slog: 09:34:10 [STATUS] Hello!
+11:06:31 [i] Hello!
 $ cat log.txt 
-slog: 09:34:10 [ERROR] Logger in a file mode!
-$ grep "slog:" /var/log/syslog
-Nov 15 09:34:10 spb slog: [WARNING] This message goes to syslog
+11:06:31 [E] Logger in a file mode!
+11:06:31 [d] This is debug message
+11:06:31 [t] This is trace message
+$ grep "slog\[" /var/log/syslog
+Aug  4 11:06:31 spb slog[13281]: [W] This message goes to syslog
 ```
 ## Buildroot
 ### package
